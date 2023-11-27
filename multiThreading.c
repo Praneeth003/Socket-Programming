@@ -98,7 +98,7 @@ int main()
     sem_init(&sem2, 0, 0);
     sem_init(&sem3, 0, 0);
     sem_init(&sem4, 0, 0);
-    
+
     pthread_t thread_id1;
     pthread_t thread_id2;
     pthread_t thread_id3;
@@ -110,7 +110,7 @@ int main()
 
     char *input = malloc(1000);
     strcpy(input, str);
- 
+
     pthread_create(&thread_id1, NULL, charA, (void *)input);
     pthread_create(&thread_id2, NULL, charE, (void *)input);
     pthread_create(&thread_id3, NULL, charI, (void *)input);
@@ -128,8 +128,6 @@ int main()
     sem_destroy(&sem2);
     sem_destroy(&sem3);
     sem_destroy(&sem4);
-
-
 
     // printf("\nFinal string is:%s\n", input);
 
