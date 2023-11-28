@@ -44,10 +44,20 @@ int main(int argc, char const *argv[])
     char buffer[1024] = {0};
 
     char *msg = "Hey, I am client";
-    send(clientsockfd, msg, strlen(msg), 0);
+    ssize_t bytes_sent = send(clientsockfd, msg, strlen(msg), 0);
+    if (bytes_sent != strlen(msg))
+    {
+        perror("Send Error");
+    }
     printf("\n Debugging: Message sent \n");
+
     valread = read(clientsockfd, buffer, 1023);
-    printf("%s", buffer);
+    if (valread < 0)
+    {
+        perror("read");
+    }
+    buffer[valread] = '\0'; // Properly terminate the received message
+    printf("%s \n", buffer);
 
     close(clientsockfd);
     return 1;
