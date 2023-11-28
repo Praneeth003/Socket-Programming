@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#define PORT 6000
+#define PORT 3000
 
 int main(int argc, char const *argv[])
 {
