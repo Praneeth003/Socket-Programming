@@ -9,15 +9,15 @@
 #include <errno.h>
 #include <arpa/inet.h>
 
-#define PORT 3000
+#define PORT 3006
 
 int main(int argc, char const *argv[])
 {
     int i, clientsocket[10], maxclients = 10;
     ssize_t valread;
-    int newsocket;
+    int newsocket, addresslen;
     char buffer[1024] = {0};
-    char *message = "Qwerty";
+    char *message = "Hi Client, this is Server";
 
     // Set of socket descriptors
     fd_set readfds;
@@ -56,15 +56,15 @@ int main(int argc, char const *argv[])
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
-    socklen_t addresslen = sizeof(address);
+    // socklen_t addresslen = sizeof(address);
 
     // Binding socket to the defined port and address. In our case, this address is localhost.
-    if (bind(serversockfd, (struct sockaddr *)&address, addresslen) < 0)
+    if (bind(serversockfd, (struct sockaddr *)&address, sizeof(address)) < 0)
     {
         perror("Binding Failed");
         exit(EXIT_FAILURE);
     }
-    printf("Binding successful\n");
+    printf("Debugging: Binding successful\n");
 
     // Listening...
     if (listen(serversockfd, 3) < 0)
@@ -72,7 +72,7 @@ int main(int argc, char const *argv[])
         perror("Listening Error");
         exit(EXIT_FAILURE);
     }
-    printf("Listening...\n");
+    printf(" Debugging: Listening successful\n");
 
     // Accepting the incoming connections
     while (1)
@@ -82,7 +82,7 @@ int main(int argc, char const *argv[])
         FD_SET(serversockfd, &readfds);
         int maxfd = serversockfd;
 
-        // Add client sockets to the set if its valid
+        // Add client sockets to the set if they are valid
         for (i = 0; i < maxclients; i++)
         {
             if (clientsocket[i] > 0)
@@ -103,52 +103,67 @@ int main(int argc, char const *argv[])
             printf("select error");
         }
 
+        // If something happened on the server socket, then its an incoming connection
         if (FD_ISSET(serversockfd, &readfds))
         {
             // Accepting...
-            newsocket = accept(serversockfd, (struct sockaddr *)&address, &addresslen);
+            newsocket = accept(serversockfd, (struct sockaddr *)&address, (socklen_t *)&addresslen);
             if (newsocket < 0)
             {
                 perror("Accept Error");
                 exit(EXIT_FAILURE);
             }
-            printf("asfds %d", newsocket);
 
             // inform user of socket number - used in send and receive commands
-            // printf("New connection , socket fd is %d , ip is : %s , port : %d
-            //       \n" , newsocket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+            printf("New connection , socket fd is %d , ip is : %s , port : %d \n", newsocket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
 
             // send new connection greeting message
 
             if (send(newsocket, message, strlen(message), 0) != strlen(message))
             {
-                perror("send");
+                perror("Sending Message to the client error");
             }
-            puts("Welcome message sent successfully");
+            puts("Welcome message is sent successfully");
 
-            // add new socket to array of sockets
+            // Add new socket to array of sockets
             for (i = 0; i < maxclients; i++)
             {
-                // if position is empty
+                // Check if the position is empty
                 if (clientsocket[i] == 0)
                 {
                     clientsocket[i] = newsocket;
                     printf("Adding to list of sockets as %d\n", i);
-
                     break;
                 }
             }
         }
+
+        // Else, its some IO operation on some other socket
+        for (i = 0; i < maxclients; i++)
+        {
+            if (FD_ISSET(clientsocket[i], &readfds))
+            {
+                // Check if it was for closing and also read the incoming message
+                valread = read(clientsocket[i], buffer, 1024);
+                if (valread == 0)
+                {
+                    // Somebody is disconnected, get his details and print
+                    int result = getpeername(clientsocket[i], (struct sockaddr *)&address, (socklen_t *)&addresslen);
+                    printf("Host disconnected , ip %s , port %d \n", inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+                    close(clientsocket[i]);
+                    clientsocket[i] = 0;
+                }
+                // Echo back the message that came in
+                else
+                {
+                    printf("%s", buffer);
+                    // Set the string terminating NULL byte on the end of the data read
+                    buffer[valread] = '\0';
+                    send(clientsocket[i], buffer, strlen(buffer), 0);
+                }
+            }
+        }
     }
-
-    printf("Accepted a connection\n");
-
-    valread = read(newsocket, buffer, 1023);
-    printf("%s \n", buffer);
-    send(newsocket, message, strlen(message), 0);
-    printf("Message sent");
-
-    close(newsocket);
     close(serversockfd);
     return 0;
 }

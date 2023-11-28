@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#define PORT 3000
+#define PORT 3006
 
 int main(int argc, char const *argv[])
 {
@@ -38,14 +38,14 @@ int main(int argc, char const *argv[])
         printf("Connection Failed \n");
         return -1;
     }
-    printf("Connected to server\n");
+    printf("Debugging: Connected to server\n");
 
     ssize_t valread;
     char buffer[1024] = {0};
 
     char *msg = "Hey, I am client";
     send(clientsockfd, msg, strlen(msg), 0);
-    printf("\n Message sent \n");
+    printf("\n Debugging: Message sent \n");
     valread = read(clientsockfd, buffer, 1023);
     printf("%s", buffer);
 
