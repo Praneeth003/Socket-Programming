@@ -16,9 +16,9 @@ int main(int argc, char const *argv[])
     scanf("%d", &PORT);
     int i, clientsocket[10], maxclients = 10;
     ssize_t valread;
-    int newsocket, addresslen;
+    int newsocket, addresslen, temp;
     char buffer[1024] = {0};
-    char *message = "Hi Client, this is Server";
+    char *message = "Hi Client, You are connected to the server!! Start chatting!! \n";
 
     // Set of socket descriptors
     fd_set readfds;
@@ -142,14 +142,31 @@ int main(int argc, char const *argv[])
                 {
                     perror("recv error");
                 }
+                else if (valread == 0)
+                {
+                    printf("Client disconnected , ip %s , port %d \n", inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+                    close(clientsocket[i]);
+                    clientsocket[i] = 0;
+                }
                 else
                 {
                     buffer[valread] = '\0';
-                    printf("\n The message from client: %s", buffer);
+                }
+                temp = i;
+            }
+        }
+        for (i = 0; i < maxclients; i++)
+        {
+            if (clientsocket[i] != 0 && i != temp)
+            {
+                if (send(clientsocket[i], buffer, strlen(buffer), 0) != strlen(buffer))
+                {
+                    perror("Sending Error");
                 }
             }
         }
     }
     close(serversockfd);
+
     return 0;
 }
