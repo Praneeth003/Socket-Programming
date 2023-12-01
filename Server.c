@@ -71,28 +71,30 @@ int main(int argc, char const *argv[])
     }
     printf("Listening successful \n");
 
-    // Accepting the incoming connections
+    // Using select() and FD_SET() to add the server socket to the set of sockets
     FD_ZERO(&readfds);
     FD_SET(serversockfd, &readfds);
     int flag = 0;
+
+    // Accepting the incoming connections
     while (1)
     {
         int maxfd = serversockfd;
-        // Add client sockets to the set if they are valid
+        // Add client sockets to the set
         for (i = 0; i < maxclients; i++)
         {
             if (clientsocket[i] > 0)
             {
                 FD_SET(clientsocket[i], &readfds);
             }
-            // Highest File descriptor number
+            // To get the maximum file descriptor number
             if (clientsocket[i] > maxfd)
             {
                 maxfd = clientsocket[i];
             }
         }
 
-        // Waiting for some activity on one of the sockets
+        // Waiting for some activity on any one of the sockets in the set
         int activity = select(maxfd + 1, &readfds, NULL, NULL, NULL);
         if (activity < 0 && errno != EINTR)
         {
@@ -111,34 +113,35 @@ int main(int argc, char const *argv[])
             }
             printf("New Socket is accepted \n");
 
-            // send new connection greeting message
+            // The first connection should be the helper node
             if (flag == 0)
             {
                 helpersocket = newsocket;
                 flag = 1;
             }
+
+            // Else, the connection is a client socket
             else
             {
-                // Add new socket to array of sockets
+                // Add this new socket to array of sockets
                 for (i = 0; i < maxclients; i++)
                 {
                     // Check if the position is empty
                     if (clientsocket[i] == 0)
                     {
                         clientsocket[i] = newsocket;
-                        // printf("Adding to list of sockets as %d\n", i);
                         break;
                     }
                 }
             }
         }
 
-        // Else, its some IO operation on some other socket
+        // Else, its an incoming message from a client
         for (i = 0; i < maxclients; i++)
         {
             if (FD_ISSET(clientsocket[i], &readfds))
             {
-                // Check if it was for closing and also read the incoming message
+                // Check if it was for closing or else read the incoming message
                 valread = recv(clientsocket[i], buffer, sizeof(buffer) - 1, 0);
                 if (valread < 0)
                 {
@@ -153,11 +156,13 @@ int main(int argc, char const *argv[])
                 else
                 {
                     buffer[valread] = '\0';
+                    // Send this message to the helper node for capitalizing vowels
                     if (send(helpersocket, buffer, strlen(buffer), 0) != strlen(buffer))
                     {
                         perror("Sending Error");
                     }
                     memset(buffer, 0, sizeof(buffer));
+                    // Receive the capitalized message from the helper node
                     if (recv(helpersocket, buffer, sizeof(buffer) - 1, 0) < 0)
                     {
                         perror("Receiving Error");
@@ -167,6 +172,7 @@ int main(int argc, char const *argv[])
                 temp = i;
             }
         }
+        // Send the capitalized message to all the clients except the one who sent it
         for (i = 0; i < maxclients; i++)
         {
             if (clientsocket[i] != 0 && i != temp)

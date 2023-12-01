@@ -51,25 +51,26 @@ int main(int argc, char const *argv[])
     while (1)
     {
         FD_ZERO(&readfds);
-        FD_SET(STDIN_FILENO, &readfds); // Add stdin (user input) to the set
+        FD_SET(STDIN_FILENO, &readfds); // Add user input to the set
         FD_SET(clientsockfd, &readfds); // Add client socket to the set
 
         maxfd = (STDIN_FILENO > clientsockfd) ? STDIN_FILENO : clientsockfd;
 
+        // Wait for an activity
         activity = select(maxfd + 1, &readfds, NULL, NULL, NULL);
         if (activity < 0)
         {
             perror("Select error");
             exit(EXIT_FAILURE);
         }
-
+        // If there is user input:
         if (FD_ISSET(STDIN_FILENO, &readfds))
         {
             memset(buffer, 0, sizeof(buffer));
             fgets(buffer, sizeof(buffer) - 1, stdin);
             send(clientsockfd, buffer, strlen(buffer), 0);
         }
-
+        // If there is any activity on the client socket: a message from the server
         if (FD_ISSET(clientsockfd, &readfds))
         {
             memset(buffer, 0, sizeof(buffer));
@@ -83,6 +84,7 @@ int main(int argc, char const *argv[])
                 printf("Server Disconnected\n");
                 break;
             }
+            // If it receives a message from the server through any of the client sockets, it prints the message
             else
             {
                 buffer[valread] = '\0';
