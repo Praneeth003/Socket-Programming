@@ -14,11 +14,10 @@ int main(int argc, char const *argv[])
     int PORT;
     printf("Enter Port Number:");
     scanf("%d", &PORT);
-    int i, clientsocket[10], maxclients = 10;
+    int i, clientsocket[10], maxclients = 10, helpersocket;
     ssize_t valread;
     int newsocket, addresslen, temp;
     char buffer[1024] = {0};
-    char *message = "Hi Client, You are connected to the server!! Start chatting!! \n";
 
     // Set of socket descriptors
     fd_set readfds;
@@ -55,15 +54,14 @@ int main(int argc, char const *argv[])
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
-    // socklen_t addresslen = sizeof(address);
 
-    // Binding socket to the defined port and address. In our case, this address is localhost.
+    // Binding socket to the defined port and address. If unsuccessful, then exit.
     if (bind(serversockfd, (struct sockaddr *)&address, sizeof(address)) < 0)
     {
         perror("Binding Failed");
         exit(EXIT_FAILURE);
     }
-    printf("\n Debugging: Binding successful");
+    printf("Binding successful \n");
 
     // Listening...
     if (listen(serversockfd, 10) < 0)
@@ -71,14 +69,15 @@ int main(int argc, char const *argv[])
         perror("Listening Error");
         exit(EXIT_FAILURE);
     }
-    printf(" \n Debugging: Listening successful");
+    printf("Listening successful \n");
 
     // Accepting the incoming connections
     FD_ZERO(&readfds);
     FD_SET(serversockfd, &readfds);
-    int maxfd = serversockfd;
+    int flag = 0;
     while (1)
     {
+        int maxfd = serversockfd;
         // Add client sockets to the set if they are valid
         for (i = 0; i < maxclients; i++)
         {
@@ -110,23 +109,26 @@ int main(int argc, char const *argv[])
                 perror("Accept Error");
                 exit(EXIT_FAILURE);
             }
-            printf(" \n Debugging: New Socket is accepted");
+            printf("New Socket is accepted \n");
 
             // send new connection greeting message
-            if (send(newsocket, message, strlen(message), 0) != strlen(message))
+            if (flag == 0)
             {
-                perror("Sending Message to the client error");
+                helpersocket = newsocket;
+                flag = 1;
             }
-
-            // Add new socket to array of sockets
-            for (i = 0; i < maxclients; i++)
+            else
             {
-                // Check if the position is empty
-                if (clientsocket[i] == 0)
+                // Add new socket to array of sockets
+                for (i = 0; i < maxclients; i++)
                 {
-                    clientsocket[i] = newsocket;
-                    // printf("Adding to list of sockets as %d\n", i);
-                    break;
+                    // Check if the position is empty
+                    if (clientsocket[i] == 0)
+                    {
+                        clientsocket[i] = newsocket;
+                        // printf("Adding to list of sockets as %d\n", i);
+                        break;
+                    }
                 }
             }
         }
@@ -151,6 +153,16 @@ int main(int argc, char const *argv[])
                 else
                 {
                     buffer[valread] = '\0';
+                    if (send(helpersocket, buffer, strlen(buffer), 0) != strlen(buffer))
+                    {
+                        perror("Sending Error");
+                    }
+                    memset(buffer, 0, sizeof(buffer));
+                    if (recv(helpersocket, buffer, sizeof(buffer) - 1, 0) < 0)
+                    {
+                        perror("Receiving Error");
+                    }
+                    buffer[valread] = '\0';
                 }
                 temp = i;
             }
@@ -163,6 +175,7 @@ int main(int argc, char const *argv[])
                 {
                     perror("Sending Error");
                 }
+                printf("%s", buffer);
             }
         }
     }

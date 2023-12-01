@@ -42,21 +42,11 @@ int main(int argc, char const *argv[])
         printf("Connection Failed \n");
         return -1;
     }
-    printf("Debugging: Connected to server\n");
+    printf("Connected to server\n");
+    printf("Start chatting!! \n");
 
     ssize_t valread;
     char buffer[1024];
-
-    memset(buffer, 0, sizeof(buffer));
-    valread = recv(clientsockfd, buffer, 1023, 0);
-    if (valread < 0)
-    {
-        perror("Receiving Error");
-    }
-    buffer[valread] = '\0';
-    printf("Received Message from server: %s \n", buffer);
-
-    // code
 
     while (1)
     {
